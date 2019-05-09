@@ -39,6 +39,9 @@ class Application(Frame):
         self.kill_button.pack(side=LEFT, padx=6)
         self.search_and_kill_utton = Button(fr1, text='查杀程序', width=10, command=self.search_kill)
         self.search_and_kill_utton.pack(side=LEFT, padx=6)
+        self.with_name = BooleanVar()
+        self.with_name_check = Checkbutton(fr1, text='同名称一并关闭', variable=self.with_name)
+        self.with_name_check.pack(side=LEFT, padx=6)
         columns = ("id", "name", "pid")
         self.table = ttk.Treeview(fr2, show="headings", height=17, columns=columns)
         self.table.column("id", width=60, anchor='center')  # 表示列,不显示
@@ -98,9 +101,11 @@ class Application(Frame):
         return False
 
     # 通过pid杀进程
-    def kill_pro(self, pid):
+    def kill_pro(self, pid, name):
         # 占用端口的pid
         find_kill = 'taskkill -f -pid %s' % pid
+        if self.with_name.get() == True:
+            find_kill = 'taskkill -f -im %s' % name
         print(find_kill)
         result = os.popen(find_kill)
         return result.read()
@@ -134,7 +139,7 @@ class Application(Frame):
         if len(l) > 0:
             item_text = self.table.item(l[0], "values")
             print(item_text[2])  # 输出所选行的第3列的值
-            re = self.kill_pro(item_text[2])
+            re = self.kill_pro(item_text[2], item_text[1])
             print(re)
             # 刷新页面
             self.clear_table()
@@ -146,7 +151,7 @@ class Application(Frame):
     def search_kill(self):
         datalist = self.find_pro()
         if len(datalist) > 0:
-            re = self.kill_pro(datalist[0]['pid'])
+            re = self.kill_pro(datalist[0]['pid'], datalist[0]['name'])
             print(re)
             # 刷新页面
             self.clear_table()
