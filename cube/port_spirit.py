@@ -29,7 +29,7 @@ class Application(Frame):
         fr2 = Frame(self, pady=6)
         fr1.pack(side='top')
         fr2.pack(side='bottom', expand=YES, fill=BOTH)
-        self.label = Label(fr1, text='端口号:')
+        self.label = Label(fr1, text='端口号/程序名:')
         self.label.pack(side=LEFT, padx=3)
         self.port_input = Entry(fr1)
         self.port_input.pack(side=LEFT, padx=6)
@@ -37,7 +37,7 @@ class Application(Frame):
         self.alert_button.pack(side=LEFT, padx=6)
         self.kill_button = Button(fr1, text='关闭程序', width=10, command=self.kill)
         self.kill_button.pack(side=LEFT, padx=6)
-        self.search_and_kill_utton = Button(fr1, text='查杀程序', width=10, command=self.search_kill)
+        self.search_and_kill_utton = Button(fr1, text='一键查杀', width=10, command=self.search_kill)
         self.search_and_kill_utton.pack(side=LEFT, padx=6)
         self.with_name = BooleanVar()
         self.with_name_check = Checkbutton(fr1, text='同名称一并关闭', variable=self.with_name)
@@ -66,19 +66,41 @@ class Application(Frame):
         print(datalist)
         return datalist
 
+    # 通过程序名称查询明细
+    def find_by_name(self):
+        l = []
+        count = 0
+        name = self.port_input.get()
+        index_start = name.rfind('.')
+        if index_start == -1:
+            name += '.exe'
+        find_pro = 'tasklist -fi "imagename eq %s"' % name
+        result = os.popen(find_pro)
+        text = result.read()
+        datalist2 = text.strip().split('\n')
+        print(datalist2)
+        for m in datalist2:
+            itemList = re.split(r'\s+', m.strip())
+            if len(itemList) >= 4 and itemList[0] == name:
+                count = count + 1
+                l.append({'id': str(count), 'name': itemList[0], 'pid': itemList[1]})
+
+        return l
+
     # 查询进程明细
     def getDetail(self, datalist):
         l = []
         count = 0
         for i in datalist:
-            find_pro = 'tasklist|findstr %s' % i
+            # find_pro = 'tasklist|findstr %s' % i
+            find_pro = 'tasklist -fi "pid eq %s"' % i
             result = os.popen(find_pro)
             text = result.read()
-            datalist = text.strip().split('\n')
-            print(datalist)
-            for m in datalist:
+            datalist2 = text.strip().split('\n')
+            print(datalist2)
+            for m in datalist2:
                 itemList = re.split(r'\s+', m.strip())
-                if len(itemList) >= 4:
+                if len(itemList) >= 4 and itemList[1] == i:
                     count = count + 1
                     l.append({'id': str(count), 'name': itemList[0], 'pid': itemList[1]})
         return l
@@ -99,6 +121,14 @@ class Application(Frame):
                     itemList[1])] == self.port_input.get():
                 return True
         return False
+
+    # 通过程序名杀进程
+    def kill_pro_by_name(self, name):
+        # 占用端口的pid
+        find_kill = 'taskkill -f -im %s' % name
+        print(find_kill)
+        result = os.popen(find_kill)
+        return result.read()
 
     # 通过pid杀进程
     def kill_pro(self, pid, name):
@@ -123,39 +153,57 @@ class Application(Frame):
     # 通过端口查询并展示
     def search(self):
         port = self.port_input.get()
+        datalist = []
         if port == '':
-            messagebox.showinfo('信息', '请输入端口号')
-
+            messagebox.showinfo('信息', '请输入端口号或程序名称')
+            return
+        elif port.isnumeric():
+            datalist = self.find_pro()
+        else:
+            datalist = self.find_by_name()
         # 刷新页面
         self.clear_table()
-        datalist = self.find_pro()
+
         for i in datalist:
             self.table.insert('', 'end', values=[i['id'], i['name'], i['pid']])
 
     # 查杀指定行程序
     def kill(self):
         l = self.table.selection()
-
         if len(l) > 0:
             item_text = self.table.item(l[0], "values")
             print(item_text[2])  # 输出所选行的第3列的值
             re = self.kill_pro(item_text[2], item_text[1])
             print(re)
-            # 刷新页面
-            self.clear_table()
             messagebox.showinfo('信息', re)
+            self.search()
         else:
             messagebox.showinfo('信息', '请选择程序')
 
     # 一键查杀
     def search_kill(self):
-        datalist = self.find_pro()
-        if len(datalist) > 0:
-            re = self.kill_pro(datalist[0]['pid'], datalist[0]['name'])
-            print(re)
-            # 刷新页面
-            self.clear_table()
-            messagebox.showinfo('信息', re)
+        port = self.port_input.get()
+        datalist = []
+        re = ''
+        if port == '':
+            messagebox.showinfo('信息', '请输入端口号或程序名称')
+            return
+        elif port.isnumeric():
+            # 通过pid
+            datalist = self.find_pro()
+            if len(datalist) > 0:
+                re = self.kill_pro(datalist[0]['pid'], datalist[0]['name'])
+                print(re)
+        else:
+            # 通过程序名
+            datalist = self.find_by_name()
+            if len(datalist) > 0:
+                re = self.kill_pro_by_name(datalist[0]['name'])
+                print(re)
+
+        # 刷新页面
+        self.clear_table()
+        messagebox.showinfo('信息', re)
 
 
 if __name__ == '__main__':
