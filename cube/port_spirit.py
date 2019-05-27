@@ -2,11 +2,12 @@
    author: yufei
    date: 2019-05-09
 """
-from tkinter import *
-import tkinter.messagebox as messagebox
-from tkinter import ttk
 import os
 import re
+import subprocess
+import tkinter.messagebox as messagebox
+from tkinter import *
+from tkinter import ttk
 
 
 class Application(Frame):
@@ -17,7 +18,7 @@ class Application(Frame):
         # 设置窗口标题:
         self.master.title('端口查杀程序')
         width = 700
-        height = 450
+        height = 500
         screenwidth = self.master.winfo_screenwidth()
         screenheight = self.master.winfo_screenheight()
         size = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
@@ -25,8 +26,14 @@ class Application(Frame):
 
     # 创建组件
     def createWidgets(self):
-        fr1 = Frame(self, pady=6)
-        fr2 = Frame(self, pady=6)
+        notebook = ttk.Notebook(self)
+        n1 = Frame(notebook)
+        n2 = Frame(notebook, pady=6)
+        notebook.add(n1, text='查杀程序')
+        notebook.add(n2, text='所有程序')
+        notebook.pack(pady=10)
+        fr1 = Frame(n1, pady=6)
+        fr2 = Frame(n1, pady=6)
         fr1.pack(side='top')
         fr2.pack(side='bottom', expand=YES, fill=BOTH)
         self.label = Label(fr1, text='端口号/程序名:')
@@ -52,7 +59,17 @@ class Application(Frame):
         self.table.heading("pid", text="进程号")
         self.table.pack(side=LEFT, expand=YES, fill=BOTH)
 
-    ## 查找端口的pid
+        columns2 = ("id", "name", "pid")
+        self.table2 = ttk.Treeview(n2, show="headings", height=17, columns=columns2)
+        self.table2.column("id", width=60, anchor='center')  # 表示列,不显示
+        self.table2.column("name", width=350, anchor='center')  # 表示列,不显示
+        self.table2.column("pid", width=200, anchor='center')
+        self.table2.heading("id", text="序号")  # 显示表头
+        self.table2.heading("name", text="程序名称")  # 显示表头
+        self.table2.heading("pid", text="进程号")
+        self.table2.pack(side=LEFT, expand=YES, fill=BOTH)
+
+    # 查找端口的pid
     def find_pro(self):
         find_port = 'netstat -aon | findstr %s' % self.port_input.get()
         result = os.popen(find_port)
@@ -206,7 +223,22 @@ class Application(Frame):
         messagebox.showinfo('信息', re)
 
 
+# 查询所有程序端口信息-需要管理员权限
+def get_all_info():
+    find_pro = 'netstat -abon'
+    result = os.popen(find_pro)
+    text = result.read()
+    print(text)
+
+
+# 使用管道
+def use_pep():
+    pipe = subprocess.Popen('netstat -abon', shell=True, stdout=subprocess.PIPE).stdout
+
+
+# 入口
 if __name__ == '__main__':
     app = Application()
     # 主消息循环:
     app.mainloop()
+    use_pep()
