@@ -32,6 +32,9 @@ class Application(Frame):
         self.label = Label(fr1, text='端口号/程序名:')
         self.label.pack(side=LEFT, padx=3)
         self.port_input = Entry(fr1)
+        # 绑定回车事件到处理函数
+        self.port_input.bind("<Return>", self.on_entry_return);
+        
         self.port_input.pack(side=LEFT, padx=6)
         self.alert_button = Button(fr1, text='查询', width=6, command=self.search)
         self.alert_button.pack(side=LEFT, padx=6)
@@ -52,6 +55,10 @@ class Application(Frame):
         self.table.heading("pid", text="进程号")
         self.table.pack(side=LEFT, expand=YES, fill=BOTH)
 
+    ## 端口输入框支持回车查询
+    def on_entry_return(self, event):
+        self.search();
+        
     ## 查找端口的pid
     def find_pro(self):
         find_port = 'netstat -aon | findstr %s' % self.port_input.get()
